@@ -1,0 +1,18 @@
+{
+  "short_name": "看房資料庫",
+  "name": "我的看房資料庫 - 買房決策助手",
+  "description": "個人看房資料庫與房貸試算、房屋比較 PWA 應用程式",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#090d16",
+  "theme_color": "#4f46e5",
+  "display": "standalone",
+  "orientation": "any"
+}

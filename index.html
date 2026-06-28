@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="個人看房管理系統，隨時隨地紀錄您的看房軌跡，分析房價、試算房貸、多房比較，完美做出購屋決策。支援離線使用（PWA）與本地儲存。">
+  <meta name="theme-color" content="#4f46e5">
+  <title>我的看房資料庫 | 買房決策助手 PWA</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <!-- Apple Touch Icon -->
+  <link rel="apple-touch-icon" href="icon.svg">
+</head>
+<body>
+
+  <!-- 背景氛圍裝飾 -->
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <!-- 頂部導覽列 -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="logo" id="nav-logo">
+        <svg viewBox="0 0 24 24">
+          <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+        </svg>
+        <span>看房資料庫</span>
+      </div>
+      <div class="header-actions">
+        <!-- 同步狀態標示 -->
+        <div id="sync-status-indicator" style="display: none; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--text-secondary); margin-right: 0.5rem; background: var(--bg-primary); padding: 0.3rem 0.6rem; border-radius: 50px; border: 1px solid var(--border-color)">
+          <span id="sync-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; display: inline-block;"></span>
+          <span id="sync-status-text">未連線</span>
+        </div>
+        <button class="btn-icon" id="btn-toggle-theme" title="切換主題">
+          <!-- 太陽/月亮圖標，由 JS 動態切換 -->
+        </button>
+        <button class="btn-icon" id="nav-settings" title="系統設定 & 備份">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主內容區 -->
+  <main class="main-content">
+
+    <!-- 1. 首頁儀表板 (Dashboard) -->
+    <div id="page-dashboard" class="page active">
+      <div class="glass-card search-filter-section">
+        <div class="search-bar-wrapper">
+          <svg viewBox="0 0 24 24">
+            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+          <input type="text" id="search-input" class="search-input" placeholder="輸入社區、標題、地址、備註關鍵字搜尋...">
+        </div>
+        
+        <div class="filter-grid">
+          <div class="filter-item">
+            <label for="filter-region">地區</label>
+            <select id="filter-region" class="filter-select">
+              <option value="">全部地區</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label for="filter-price">價格區間</label>
+            <select id="filter-price" class="filter-select">
+              <option value="">全部價格</option>
+              <option value="under-1000">1000 萬以下</option>
+              <option value="1000-1500">1000 - 1500 萬</option>
+              <option value="1500-2500">1500 - 2500 萬</option>
+              <option value="above-2500">2500 萬以上</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label for="filter-ping">坪數範圍</label>
+            <select id="filter-ping" class="filter-select">
+              <option value="">全部坪數</option>
+              <option value="under-20">20 坪以下</option>
+              <option value="20-35">20 - 35 坪</option>
+              <option value="35-50">35 - 50 坪</option>
+              <option value="above-50">50 坪以上</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label for="filter-layout">格局房數</label>
+            <select id="filter-layout" class="filter-select">
+              <option value="">全部格局</option>
+              <option value="1">1 房</option>
+              <option value="2">2 房</option>
+              <option value="3">3 房</option>
+              <option value="4+">4 房以上</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label for="filter-rating">最低評分</label>
+            <select id="filter-rating" class="filter-select">
+              <option value="">全部評分</option>
+              <option value="5">★★★★★ (5星)</option>
+              <option value="4">★★★★☆ (4星以上)</option>
+              <option value="3">★★★☆☆ (3星以上)</option>
+              <option value="2">★★☆☆☆ (2星以上)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 批次比較操作列 -->
+      <div id="batch-actions-bar" class="batch-actions-bar">
+        <span class="batch-info" id="batch-count">已選取 0 間房屋</span>
+        <div style="display:flex; gap:0.5rem">
+          <button class="btn btn-primary" id="btn-batch-compare">📊 比較選取房屋</button>
+          <button class="btn btn-secondary" id="btn-batch-clear">清除選取</button>
+        </div>
+      </div>
+
+      <!-- 房屋卡片 Grid 列表 -->
+      <div class="house-grid" id="house-grid">
+        <!-- 房屋卡片由 JS 動態生成 -->
+      </div>
+    </div>
+
+    <!-- 2. 新增 / 編輯房屋表單 (House Form) -->
+    <div id="page-form" class="page">
+      <div class="glass-card">
+        <h2 class="form-title" id="house-form-title">新增看房紀錄</h2>
+        <form id="house-edit-form">
+          <div class="form-grid">
+            <!-- 基本資訊 -->
+            <div class="form-group">
+              <label for="form-title">房屋標題 <span style="color:var(--danger)">*</span></label>
+              <input type="text" id="form-title" class="form-control" placeholder="例：全新高樓三房雙車位" required>
+            </div>
+            <div class="form-group">
+              <label for="form-community">社區名稱</label>
+              <input type="text" id="form-community" class="form-control" placeholder="例：精銳博">
+            </div>
+            <div class="form-group full-width">
+              <label for="form-address">地址</label>
+              <input type="text" id="form-address" class="form-control" placeholder="請輸入完整地址（將會自動產生 Google 地圖）">
+            </div>
+
+            <!-- 價錢與坪數 -->
+            <div class="form-group">
+              <label for="form-price">開價 (萬元)</label>
+              <input type="number" id="form-price" class="form-control" placeholder="例：1280" min="0">
+            </div>
+            <div class="form-group">
+              <label for="form-deal-price">成交價 (萬元，之後可補)</label>
+              <input type="number" id="form-deal-price" class="form-control" placeholder="成交後補入" min="0">
+            </div>
+            <div class="form-group">
+              <label for="form-ping">建物坪數 (坪)</label>
+              <input type="number" id="form-ping" class="form-control" step="0.01" placeholder="例: 35.4" min="0">
+            </div>
+            <div class="form-group">
+              <label for="form-age">屋齡 (年)</label>
+              <input type="number" id="form-age" class="form-control" placeholder="新成屋請填 0" min="0">
+            </div>
+
+            <!-- 樓層與格局 -->
+            <div class="form-group">
+              <label for="form-floor">樓層</label>
+              <input type="text" id="form-floor" class="form-control" placeholder="例: 8F / 15F">
+            </div>
+            <div class="form-group">
+              <label for="form-layout">格局</label>
+              <input type="text" id="form-layout" class="form-control" placeholder="例: 3房2廳2衛">
+            </div>
+            <div class="form-group">
+              <label for="form-parking">車位資訊</label>
+              <input type="text" id="form-parking" class="form-control" placeholder="例: B2坡道平面、無">
+            </div>
+            <div class="form-group">
+              <label for="form-mgmt-fee">管理費 (元/月)</label>
+              <input type="number" id="form-mgmt-fee" class="form-control" placeholder="例: 2500" min="0">
+            </div>
+
+            <!-- 其他細節 -->
+            <div class="form-group">
+              <label for="form-orientation">朝向</label>
+              <input type="text" id="form-orientation" class="form-control" placeholder="例: 坐北朝南、面中庭">
+            </div>
+            <div class="form-group">
+              <label for="form-decoration">裝潢狀況</label>
+              <input type="text" id="form-decoration" class="form-control" placeholder="例: 簡裝、清水模、豪華裝潢">
+            </div>
+            <div class="form-group">
+              <label for="form-lighting">採光評級</label>
+              <select id="form-lighting" class="form-control">
+                <option value="5">★★★★★ (極佳)</option>
+                <option value="4">★★★★☆ (良好)</option>
+                <option value="3" selected>★★★☆☆ (普通)</option>
+                <option value="2">★★☆☆☆ (稍暗)</option>
+                <option value="1">★☆☆☆☆ (暗房)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="form-ventilation">通風評級</label>
+              <select id="form-ventilation" class="form-control">
+                <option value="5">★★★★★ (對流極佳)</option>
+                <option value="4">★★★★☆ (良好)</option>
+                <option value="3" selected>★★★☆☆ (普通)</option>
+                <option value="2">★★☆☆☆ (稍悶)</option>
+                <option value="1">★☆☆☆☆ (無對外窗/不通風)</option>
+              </select>
+            </div>
+
+            <!-- 聯絡與資訊連結 -->
+            <div class="form-group">
+              <label for="form-agent-name">房仲姓名</label>
+              <input type="text" id="form-agent-name" class="form-control" placeholder="例: 王小明 (信義房屋)">
+            </div>
+            <div class="form-group">
+              <label for="form-agent-phone">房仲電話</label>
+              <input type="tel" id="form-agent-phone" class="form-control" placeholder="例: 0912345678">
+            </div>
+            <div class="form-group">
+              <label for="form-visit-date">看房日期</label>
+              <input type="date" id="form-visit-date" class="form-control">
+            </div>
+            <div class="form-group">
+              <label for="form-link">售屋網址連結</label>
+              <input type="url" id="form-link" class="form-control" placeholder="例: 591, 樂屋網連結">
+            </div>
+
+            <!-- 自己的評分 -->
+            <div class="form-group full-width">
+              <label>自訂綜合評分</label>
+              <div id="star-rating-select-container" class="star-rating-select" data-value="3">
+                <!-- 星星按鈕由 JS 產生 -->
+              </div>
+            </div>
+
+            <!-- 心得與優缺點 -->
+            <div class="form-group full-width">
+              <label for="form-pros">優點 (每行一個)</label>
+              <textarea id="form-pros" class="form-control" rows="3" placeholder="格局方正&#10;採光良好，無暗房&#10;雙衛浴開窗"></textarea>
+            </div>
+            <div class="form-group full-width">
+              <label for="form-cons">缺點 (每行一個)</label>
+              <textarea id="form-cons" class="form-control" rows="3" placeholder="臨主要幹道，有些微車流聲&#10;公設比偏高"></textarea>
+            </div>
+            <div class="form-group full-width">
+              <label for="form-notes">本次看房心得/備註</label>
+              <textarea id="form-notes" class="form-control" rows="4" placeholder="今天與家人一起看房，格局大致滿意。但需注意垃圾集中處的動線..."></textarea>
+            </div>
+
+            <!-- 照片上傳區 -->
+            <div class="form-group full-width">
+              <label>上傳房屋照片 (最多 10 張，上傳時會自動壓縮)</label>
+              <div class="dropzone" id="dropzone">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <div class="dropzone-text">將相片拖曳至此處，或點擊進行選取</div>
+                <input type="file" id="file-upload-input" multiple accept="image/*" style="display:none">
+              </div>
+              <div class="photo-preview-grid" id="photo-preview-grid">
+                <!-- 圖片預覽由 JS 渲染 -->
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="btn-form-cancel">取消</button>
+            <button type="submit" class="btn btn-primary">💾 儲存紀錄</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 3. 房屋詳細資訊頁面 (House Detail) -->
+    <div id="page-detail" class="page">
+      <!-- 詳情頂部按鈕列與標題 -->
+      <div class="detail-header">
+        <div class="detail-title-area">
+          <button class="btn btn-secondary" id="btn-detail-back" style="margin-bottom:0.75rem; padding: 0.4rem 0.8rem">← 返回列表</button>
+          <h2 id="detail-title">精銳博高樓層</h2>
+          <p id="detail-subtitle" class="text-secondary"></p>
+        </div>
+        <div style="display:flex; gap:0.5rem; align-items: center">
+          <button class="btn btn-secondary" id="btn-detail-edit">✏️ 編輯</button>
+          <button class="btn btn-danger" id="btn-detail-delete">🗑️ 刪除</button>
+        </div>
+      </div>
+
+      <!-- 房屋照片輪播區 -->
+      <div class="carousel-container" id="detail-carousel-container">
+        <button class="carousel-btn carousel-btn-prev" id="btn-carousel-prev">
+          <svg viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <div class="carousel-inner" id="detail-carousel-inner" style="width:100%; height:100%">
+          <!-- 圖片 Slides -->
+        </div>
+        <button class="carousel-btn carousel-btn-next" id="btn-carousel-next">
+          <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+        <div class="carousel-dots" id="detail-carousel-dots">
+          <!-- 輪播圓點 -->
+        </div>
+      </div>
+
+      <!-- 詳細內容網格佈局 -->
+      <div class="detail-grid">
+        <!-- 左側：詳細規格與看房筆記 -->
+        <div class="detail-left-column">
+          <!-- 開價與成交價區塊 -->
+          <div class="glass-card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem">
+            <div>
+              <span class="text-secondary" style="font-size:0.9rem">開價</span>
+              <div class="detail-price-tag"><span id="detail-price-val">--</span> <span>萬元</span></div>
+            </div>
+            <div id="detail-deal-price-area" style="display:none; border-left: 2px solid var(--border-color); padding-left: 1.5rem">
+              <span class="text-secondary" style="font-size:0.9rem; color:var(--success)">🎉 成交價</span>
+              <div class="detail-price-tag" style="color:var(--success)"><span id="detail-deal-price-val">--</span> <span>萬元</span></div>
+            </div>
+            <div>
+              <span class="text-secondary" style="font-size:0.9rem">我的綜合評價</span>
+              <div style="font-size:1.4rem; color:#ffb800" id="detail-rating-display">★★★★☆</div>
+              <span style="font-size:0.8rem; color:var(--text-muted)" id="detail-rating-num">(4 / 5)</span>
+            </div>
+          </div>
+
+          <!-- 規格面板 -->
+          <div class="glass-card">
+            <h3 style="margin-bottom:1rem; font-size:1.15rem">🏢 房屋詳細規格</h3>
+            <div class="specs-panel">
+              <div class="spec-box">
+                <div class="spec-icon-wrapper">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4V4z"/><path d="M9 9h6v6H9V9z"/></svg>
+                </div>
+                <div class="spec-box-content">
+                  <span class="spec-box-val" id="detail-spec-ping">-- 坪</span>
+                  <span class="spec-box-lbl">坪數</span>
+                </div>
+              </div>
+              <div class="spec-box">
+                <div class="spec-icon-wrapper">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </div>
+                <div class="spec-box-content">
+                  <span class="spec-box-val" id="detail-spec-unit-price">-- 萬/坪</span>
+                  <span class="spec-box-lbl">單價</span>
+                </div>
+              </div>
+              <div class="spec-box">
+                <div class="spec-icon-wrapper">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                </div>
+                <div class="spec-box-content">
+                  <span class="spec-box-val" id="detail-spec-age">-- 年</span>
+                  <span class="spec-box-lbl">屋齡</span>
+                </div>
+              </div>
+              <div class="spec-box">
+                <div class="spec-icon-wrapper">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+                </div>
+                <div class="spec-box-content">
+                  <span class="spec-box-val" id="detail-spec-floor">-- 樓</span>
+                  <span class="spec-box-lbl">樓層</span>
+                </div>
+              </div>
+              <div class="spec-box">
+                <div class="spec-icon-wrapper">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/><path d="M9 22V12h6v10"/></svg>
+                </div>
+                <div class="spec-box-content">
+                  <span class="spec-box-val" id="detail-spec-layout">--</span>
+                  <span class="spec-box-lbl">格局</span>
+                </div>
+              </div>
+              <div class="spec-box">
+                <div class="spec-icon-wrapper">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="22" height="18" rx="2" ry="2"/><path d="M7 8h10M7 12h10M7 16h10"/></svg>
+                </div>
+                <div class="spec-box-content">
+                  <span class="spec-box-val" id="detail-spec-parking">--</span>
+                  <span class="spec-box-lbl">車位</span>
+                </div>
+              </div>
+              <div class="spec-box">
+                <div class="spec-icon-wrapper">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
+                </div>
+                <div class="spec-box-content">
+                  <span class="spec-box-val" id="detail-spec-mgmt">--</span>
+                  <span class="spec-box-lbl">管理費</span>
+                </div>
+              </div>
+              <div class="spec-box">
+                <div class="spec-icon-wrapper">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h22M12 2v22M4.93 4.93l14.14 14.14M4.93 19.07L19.07 4.93"/></svg>
+                </div>
+                <div class="spec-box-content">
+                  <span class="spec-box-val" id="detail-spec-orientation">--</span>
+                  <span class="spec-box-lbl">朝向</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 其他細節列表 -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+              <div>採光評估：<span id="detail-spec-lighting" style="color:#ffb800">★★★☆☆</span></div>
+              <div>通風評估：<span id="detail-spec-ventilation" style="color:#ffb800">★★★☆☆</span></div>
+              <div>裝潢屋況：<span id="detail-spec-decoration" style="font-weight:600">簡裝</span></div>
+            </div>
+          </div>
+
+          <!-- 優缺點列表 -->
+          <div class="glass-card">
+            <h3 style="margin-bottom:1rem; font-size:1.15rem">⚖️ 特色評估</h3>
+            <div class="pros-cons-grid">
+              <div class="pro-con-card pro-card">
+                <div class="pro-con-title">
+                  <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                  <span>房屋優點</span>
+                </div>
+                <ul class="pro-con-list" id="detail-pros-list">
+                  <!-- 優點列表 -->
+                </ul>
+              </div>
+              
+              <div class="pro-con-card con-card">
+                <div class="pro-con-title">
+                  <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+                  <span>注意缺點</span>
+                </div>
+                <ul class="pro-con-list" id="detail-cons-list">
+                  <!-- 缺點列表 -->
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- 筆記備註 -->
+          <div class="glass-card">
+            <h3 style="margin-bottom:0.75rem; font-size:1.15rem">📝 隨手筆記</h3>
+            <p id="detail-notes-content" style="white-space: pre-line; color: var(--text-primary); font-size: 0.95rem; line-height: 1.7;"></p>
+          </div>
+
+          <!-- 看房歷史紀錄與時間軸 -->
+          <div class="glass-card">
+            <h3 style="margin-bottom:1rem; font-size:1.15rem">📅 看房歷程軌跡</h3>
+            <div class="timeline" id="detail-timeline">
+              <!-- 看房歷史紀錄 -->
+            </div>
+            <!-- 快速追加歷史筆記 -->
+            <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px dashed var(--border-color)">
+              <label for="history-log-notes" style="display:block; font-size:0.85rem; font-weight:600; color:var(--text-secondary); margin-bottom:0.5rem">新增本次看房心得/價格變化紀錄：</label>
+              <div style="display:flex; gap:0.5rem">
+                <input type="text" id="history-log-notes" class="form-control" placeholder="例：再次複看，仲介表示價格可議，並確認頂樓無漏水跡象。">
+                <button class="btn btn-primary" id="btn-add-history-log">新增心得</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右側：房貸試算、仲介與地圖 -->
+        <div class="detail-right-column">
+          <!-- 房貸試算器 -->
+          <div class="glass-card mortgage-card">
+            <h3 style="margin-bottom:1rem; font-size:1.15rem; display:flex; align-items:center; gap:0.5rem">
+              <svg style="width:20px; height:20px; stroke:var(--primary); fill:none; stroke-width:2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>
+              房貸試算 (本息均攤)
+            </h3>
+            <div class="mortgage-input-row">
+              <div class="filter-item">
+                <label for="calc-loan-percent">貸款成數 (%)</label>
+                <input type="number" id="calc-loan-percent" class="filter-input" value="80" min="10" max="100">
+              </div>
+              <div class="filter-item">
+                <label for="calc-loan-years">貸款年限 (年)</label>
+                <input type="number" id="calc-loan-years" class="filter-input" value="30" min="1" max="50">
+              </div>
+              <div class="filter-item">
+                <label for="calc-rate">年利率 (%)</label>
+                <input type="number" id="calc-rate" class="filter-input" value="2.185" step="0.001">
+              </div>
+              <div class="filter-item">
+                <label for="calc-grace">寬限期 (年，選填)</label>
+                <input type="number" id="calc-grace" class="filter-input" value="0" min="0" max="5">
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.5rem">
+              <span>試算貸款金額：<strong id="calc-total-loan">-- 萬</strong></span>
+              <span>自備款金額：<strong id="calc-self-pay">-- 萬</strong></span>
+            </div>
+
+            <div class="mortgage-result-display">
+              <div class="mortgage-result-val" id="calc-monthly-payment">-- 元</div>
+              <div class="mortgage-result-lbl">預估每月本息攤還</div>
+              
+              <div id="calc-grace-repay-area" style="display:none; margin-top:0.5rem; color: var(--text-secondary)">
+                <div style="font-size:1.15rem; font-weight:700; color: var(--secondary)" id="calc-monthly-grace-payment">-- 元</div>
+                <div style="font-size:0.75rem">寬限期內 (只付利息)</div>
+              </div>
+
+              <div class="mortgage-result-sub">
+                總利息支出預估：<strong id="calc-total-interest" style="color:var(--text-primary)">-- 萬</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- 聯絡資訊 -->
+          <div class="glass-card" style="margin-top:1.5rem">
+            <h3 style="margin-bottom:0.75rem; font-size:1.15rem">📞 房仲聯絡資訊</h3>
+            <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.95rem">
+              <div>房仲人員：<span id="detail-agent-name" style="font-weight:600">--</span></div>
+              <div>聯絡電話：<span id="detail-agent-phone" style="font-weight:600">--</span></div>
+            </div>
+            <div style="margin-top:1.25rem;" id="detail-web-link">
+              <!-- 外部連結按鈕 -->
+            </div>
+          </div>
+
+          <!-- Google 地圖區區塊 -->
+          <div class="glass-card" style="margin-top:1.5rem">
+            <h3 style="font-size:1.15rem">📍 地圖位置</h3>
+            <div class="map-wrapper" id="detail-map-container">
+              <!-- Google 地圖 Iframe -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. 房屋比較頁面 (Compare Page) -->
+    <div id="page-compare" class="page">
+      <div class="glass-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem">
+          <h2>📊 房屋比較矩陣</h2>
+          <button class="btn btn-secondary" id="btn-compare-back">← 返回列表</button>
+        </div>
+        
+        <div class="compare-container">
+          <table class="compare-table">
+            <thead id="compare-table-head">
+              <!-- 表頭由 JS 渲染 -->
+            </thead>
+            <tbody id="compare-table-body">
+              <!-- 表身由 JS 渲染 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. 系統設定與備份頁面 (Settings Page) -->
+    <div id="page-settings" class="page">
+      <div class="glass-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem">
+          <h2>⚙️ 系統維護與資料備份</h2>
+          <button class="btn btn-secondary" id="btn-settings-back">← 返回列表</button>
+        </div>
+
+        <div class="settings-grid">
+          <!-- 備份 -->
+          <div class="setting-card">
+            <h3>匯出資料備份</h3>
+            <p>將目前資料庫中所有的房屋規格、圖片、看房歷程導出為一個 JSON 檔案，儲存在您的裝置上。建議定期備份以保安全。</p>
+            <button class="btn btn-primary" id="btn-settings-export" style="width:100%">📤 匯出備份檔案 (.json)</button>
+          </div>
+
+          <!-- 還原 -->
+          <div class="setting-card">
+            <h3>還原資料庫</h3>
+            <p>選擇先前備份的 JSON 檔案，匯入並覆蓋您目前瀏覽器中的看房資料庫（包含所有房屋照片）。</p>
+            <button class="btn btn-secondary" id="btn-settings-import" style="width:100%">📥 選擇檔案並還原</button>
+            <input type="file" id="settings-import-input" accept="application/json" style="display:none">
+          </div>
+
+          <!-- 清空 -->
+          <div class="setting-card" style="border-color: rgba(239, 68, 68, 0.2)">
+            <h3 style="color:var(--danger)">重置資料庫</h3>
+            <p>清空瀏覽器中的所有看房記錄和照片。注意：此動作將永久刪除資料，且無法還原！請務必確認已做好備份。</p>
+            <button class="btn btn-danger" id="btn-settings-clear" style="width:100%">🗑️ 永久清空所有資料</button>
+          </div>
+
+          <!-- Google 雲端硬碟同步 -->
+          <div class="setting-card" style="grid-column: 1 / -1; border-color: rgba(79, 70, 229, 0.3)">
+            <h3>☁️ Google 雲端硬碟自動同步</h3>
+            <p>設定您的 Google API 金鑰，讓多台設備（手機、電腦、平板）自動同步最新的看房紀錄與相片。</p>
+            
+            <div class="form-grid" style="margin-top: 1rem; margin-bottom: 1.5rem">
+              <div class="form-group">
+                <label for="settings-gapi-client-id">Google Client ID</label>
+                <input type="text" id="settings-gapi-client-id" class="form-control" placeholder="輸入您的 Client ID (例: xxx.apps.googleusercontent.com)">
+              </div>
+              <div class="form-group">
+                <label for="settings-gapi-key">Google API Key</label>
+                <input type="password" id="settings-gapi-key" class="form-control" placeholder="輸入您的 Google API Key">
+              </div>
+            </div>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem">
+              <div style="font-size:0.9rem; color:var(--text-secondary)" id="settings-gapi-status-info">
+                狀態：<span style="font-weight:700" id="settings-gapi-status-text">尚未設定金鑰</span>
+              </div>
+              <div style="display:flex; gap:0.5rem">
+                <button class="btn btn-secondary" id="btn-settings-save-keys">儲存金鑰</button>
+                <button class="btn btn-primary" id="btn-settings-gapi-login" disabled>🔑 登入並授權</button>
+                <button class="btn btn-secondary" id="btn-settings-gapi-sync-now" style="display:none">🔄 立即同步</button>
+                <button class="btn btn-danger" id="btn-settings-gapi-logout" style="display:none">登出帳號</button>
+              </div>
+            </div>
+
+            <!-- 教學說明 -->
+            <div style="margin-top:1.5rem; padding-top:1.25rem; border-top:1px dashed var(--border-color); font-size:0.85rem; color:var(--text-secondary)">
+              <h4 style="color:var(--text-primary); margin-bottom:0.5rem">💡 如何取得 Google API 金鑰？（只需設定一次）</h4>
+              <ol style="margin-left:1.25rem; line-height:1.7">
+                <li>前往 <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a> 建立一個新專案。</li>
+                <li>在「API 與服務」中啟用 **Google Drive API**。</li>
+                <li>在「OAuth 同意畫面」設定為 External (外部)，填寫必要資訊並送出。</li>
+                <li>在「憑證」中：
+                  <ul>
+                    <li>建立 **API 金鑰 (API Key)**。</li>
+                    <li>建立 **OAuth 用戶端 ID (Client ID)**，應用程式類型選擇「網頁應用程式」，並在 **已授權的 JavaScript 來源** 加入您的部署網址（例如：`https://username.github.io` 與 `http://localhost` 或 `http://127.0.0.1`）。</li>
+                  </ul>
+                </li>
+                <li>將產生的 Client ID 與 API Key 貼到上方，點擊儲存並完成登入授權即可！</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 浮動新增按鈕 (FAB) -->
+  <button class="fab-add" id="fab-add" title="新增看房紀錄">
+    <svg viewBox="0 0 24 24">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  </button>
+
+  <!-- Google Drive API & Auth SDKs -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js" async defer></script>
+
+  <!-- 資料庫與核心程式腳本 -->
+  <script src="db.js"></script>
+  <script src="utils.js"></script>
+  <script src="app.js"></script>
+
+  <!-- PWA Service Worker 註冊 -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('Service Worker 註冊成功，範圍：', reg.scope))
+          .catch(err => console.error('Service Worker 註冊失敗：', err));
+      });
+    }
+  </script>
+
+</body>
+</html>

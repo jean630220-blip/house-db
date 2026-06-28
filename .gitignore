@@ -1,0 +1,5 @@
+*.zip
+
+# 忽略備份的 JSON 檔案，只保留 PWA 的 manifest.json
+*.json
+!manifest.json
